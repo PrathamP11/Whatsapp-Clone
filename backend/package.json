@@ -4,6 +4,7 @@
   "description": "WhatsApp Web Clone Backend",
   "main": "server.js",
   "scripts": {
+    "build": "cd ../frontend && npm install && npm run build",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "process-payloads": "node scripts/processPayloads.js",
