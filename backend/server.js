@@ -11,7 +11,7 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? ['https://your-frontend-domain.com'] 
+      ? true // Allow same origin in production
       : ["http://localhost:3000", "http://127.0.0.1:3000"],
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     credentials: true
@@ -25,7 +25,7 @@ const webhookRoutes = require('./routes/webhooks');
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend-domain.com'] 
+    ? true // Allow same origin in production
     : ["http://localhost:3000", "http://127.0.0.1:3000"],
   credentials: true
 }));
@@ -85,6 +85,11 @@ io.on('connection', (socket) => {
   });
 });
 
+// --- Serve React frontend in production FIRST ---
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
+}
+
 // API Routes
 app.use('/api/messages', messageRoutes);
 app.use('/api/webhook', webhookRoutes);
@@ -100,10 +105,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// --- Serve React frontend in production ---
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
-
+  // Catch all non-API routes and serve React app
   app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
   });
