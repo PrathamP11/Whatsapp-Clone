@@ -1,6 +1,6 @@
 // API helper functions using fetch instead of axios
 export const apiCall = async (url, options = {}) => {
-    const baseUrl = process.env.REACT_APP_API_URL || 'https://whatsapp-clone-gkr2.onrender.com';
+    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const response = await fetch(`${baseUrl}${url}`, {
       headers: {
         'Content-Type': 'application/json',
