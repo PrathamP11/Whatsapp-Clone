@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -32,7 +33,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Add timestamp to all logs
+// Add timestamp to logs
 const originalLog = console.log;
 console.log = function(...args) {
   originalLog.apply(console, ['[' + new Date().toISOString() + ']', ...args]);
@@ -40,10 +41,8 @@ console.log = function(...args) {
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI;
-
 if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI environment variable is required');
-  console.log('Please add your MongoDB connection string to the .env file');
   process.exit(1);
 }
 
@@ -63,7 +62,7 @@ mongoose.connect(MONGODB_URI, {
 // Make io available to routes
 app.locals.io = io;
 
-// Socket.IO connection handling
+// Socket.IO
 io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
   
@@ -86,7 +85,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// Health check endpoint
+// API Routes
+app.use('/api/messages', messageRoutes);
+app.use('/api/webhook', webhookRoutes);
+
+// Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -97,50 +100,43 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
-app.use('/api/messages', messageRoutes);
-app.use('/api/webhook', webhookRoutes);
+// --- Serve React frontend in production ---
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/build')));
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'WhatsApp Web Clone Backend API',
-    version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      conversations: '/api/messages/conversations',
-      messages: '/api/messages/messages/:wa_id',
-      send: '/api/messages/send',
-      webhook: '/api/webhook'
-    },
-    documentation: 'See README.md for API documentation'
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
   });
-});
+} else {
+  // Root endpoint in dev mode
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'WhatsApp Web Clone Backend API (Development Mode)',
+      version: '1.0.0',
+      endpoints: {
+        health: '/health',
+        conversations: '/api/messages/conversations',
+        messages: '/api/messages/messages/:wa_id',
+        send: '/api/messages/send',
+        webhook: '/api/webhook'
+      }
+    });
+  });
+}
 
-// Catch all other routes
-app.all('*', (req, res) => {
+// Catch all other routes (for API only)
+app.all('/api/*', (req, res) => {
   res.status(404).json({
     error: 'Route not found',
-    message: `Cannot ${req.method} ${req.path}`,
-    availableEndpoints: [
-      'GET /health',
-      'GET /api/messages/conversations',
-      'GET /api/messages/messages/:wa_id',
-      'POST /api/messages/send',
-      'GET /api/webhook',
-      'POST /api/webhook'
-    ]
+    message: `Cannot ${req.method} ${req.path}`
   });
 });
 
 // Global error handler
 app.use((error, req, res, next) => {
   console.error('🚨 Unhandled error:', error);
-  
   res.status(error.status || 500).json({
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
-      : error.message,
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
     ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
   });
 });
@@ -150,20 +146,18 @@ process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
 async function gracefulShutdown(signal) {
-  console.log(`\n🛑 Received ${signal}. Starting graceful shutdown...`);
+  console.log(`\n🛑 Received ${signal}. Shutting down...`);
   
   server.close(() => {
     console.log('✅ HTTP server closed');
-    
     mongoose.connection.close(false, () => {
       console.log('✅ MongoDB connection closed');
       process.exit(0);
     });
   });
-  
-  // Force shutdown after 10 seconds
+
   setTimeout(() => {
-    console.log('⏰ Forcing shutdown...');
+    console.log('⏰ Forced shutdown');
     process.exit(1);
   }, 10000);
 }
@@ -171,18 +165,7 @@ async function gracefulShutdown(signal) {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`\n🚀 Server running on port ${PORT}`);
-  console.log(`📱 WhatsApp Web Clone Backend API`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🌐 API base URL: http://localhost:${PORT}/api`);
-  console.log(`📡 WebSocket server ready`);
-  console.log(`\n📖 Available endpoints:`);
-  console.log(`   GET  /health                           - Health check`);
-  console.log(`   GET  /api/messages/conversations       - Get all conversations`);
-  console.log(`   GET  /api/messages/messages/:wa_id     - Get messages for conversation`);
-  console.log(`   POST /api/messages/send                - Send new message`);
-  console.log(`   GET  /api/webhook                      - Webhook verification`);
-  console.log(`   POST /api/webhook                      - Process webhook data`);
-  console.log(`\n⚙️  Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  console.log(`🌐 Mode: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = { app, server, io };
