@@ -1,5 +1,5 @@
 import React from 'react';
-import { getInitials, formatTime, formatDate } from '../utils/helpers';
+import { getInitials, formatTime } from '../utils/helpers';
 
 const ConversationItem = ({ conversation, isSelected, onClick }) => {
   const displayName = conversation.profile_name || conversation._id;
