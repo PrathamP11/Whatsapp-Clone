@@ -475,4 +475,4 @@ For your assignment submission, provide:
 
 **Good luck with your assignment! 🚀**
 
-Remember: This project demonstrates full-stack development skills, real-time communication, and professional UI/UX design. Take time to test thoroughly before submission.
+Remember: This project demonstrates full-stack development skills, real-time communication, and professional UI/UX design. Take time to test thoroughly before submission. 
