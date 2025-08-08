@@ -2,7 +2,6 @@
 
 A full-stack WhatsApp Web clone built with Node.js, React, and MongoDB. This project simulates real-time messaging with webhook payload processing and a responsive UI that closely mimics WhatsApp Web.
 
-![WhatsApp Clone Screenshot](https://via.placeholder.com/800x500/111b21/ffffff?text=WhatsApp+Web+Clone)
 
 ## 🚀 Features
 
